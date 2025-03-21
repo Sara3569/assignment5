@@ -2,8 +2,8 @@ name: Ebay Scraper (Every 3 hours)
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  
-  workflow_dispatch:        
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
   scrape-product:
@@ -21,15 +21,24 @@ jobs:
       - name: Install dependencies
         run: pip install selenium pandas webdriver-manager fake-useragent
 
+      - name: Debug - Check Repo Files
+        run: ls -la
 
       - name: Run Selenium scraper
         run: python scraper.py
 
-      
+      - name: Debug - Check if CSV Exists
+        run: ls -la
+
       - name: Commit and Push updated CSV
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add ebay_tech_deals.csv
-          git commit -m "Updated Products data (3-hour intervals)"
-          git push
+          if [ -f ebay_tech_deals.csv ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add ebay_tech_deals.csv
+            git commit -m "Updated Products data (3-hour intervals)"
+            git push
+          else
+            echo "CSV file not found, skipping commit."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
