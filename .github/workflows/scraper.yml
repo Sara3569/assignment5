@@ -25,6 +25,9 @@ jobs:
       - name: Run Selenium scraper
         run: python scraper.py
 
+    #   - name: Debug File Listing
+    #     run: ls -l
+      
       - name: Commit and Push updated CSV
         run: |
           git config --global user.name "GitHub Actions"

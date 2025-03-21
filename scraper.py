@@ -30,45 +30,41 @@ def scrape_products():
     driver.get(url)
     time.sleep(10)
     try:
-        #timestamp
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        products = WebDriverWait(driver, 15).until(
+        EC.presence_of_all_elements_located((By.CLASS_NAME, "dne-itemtile"))
+    )
+        product_list = []
 
-        #title 
-        title = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "ebayui-ellipsis-2"))
-        ).text
+        for product in products:
+            #timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        #discounted price
-        price = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "first"))
-        ).text
+            #title 
+            title = product.find_element(By.CLASS_NAME, "ebayui-ellipsis-2").text
 
-        #original price
-        original_price = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "itemtile-price-strikethrough"))
-        ).text
+            #discounted price
+            price = product.find_element(By.CLASS_NAME, "first").text
 
-        #shipping
-        shipping = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "dne-itemtile-delivery"))
-        ).text
+            #original price
+            original_price = product.find_element(By.CLASS_NAME, "itemtile-price-strikethrough").text
 
-        #item url
-        item_url = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//span[@itemprop = 'url']"))
-        ).get_attribute("href")
+            #shipping
+            shipping = product.find_element(By.CLASS_NAME, "dne-itemtile-delivery").text
 
-        #save data
-        product_data = {
-            "timstamp": timestamp,
-            "title": title,
-            "new_price": price, 
-            "original_price": original_price,
-            "shipping_info": shipping,
-            "item_url": item_url
-        }
-        return product_data
+            #item url
+            item_url = product.find_element(By.XPATH, ".//a[@itemprop = 'url']").get_attribute("href")
+
+            #save data
+            product_data = {
+                "timestamp": timestamp,
+                "title": title,
+                "new_price": price, 
+                "original_price": original_price,
+                "shipping_info": shipping,
+                "item_url": item_url
+            }
+            product_list.append(product_data)
+        return product_list
 
     except Exception as e:
         print("Error occurred:", e)
@@ -83,13 +79,8 @@ def save_to_csv(data):
             "timestamp", "title", "new_price", "original_price", "shipping_info", "item_url"
         ])
 
-    # Create a DataFrame for the new data row
-    new_row = pd.DataFrame([data])
-
-    # Concatenate the new row to the existing DataFrame
-    df = pd.concat([df, new_row], ignore_index=True)
-
-    # Save back to CSV
+    new_df = pd.DataFrame(data)  
+    df = pd.concat([df, new_df], ignore_index=True)
     df.to_csv(file_name, index=False)
 
 if __name__ == "__main__":
