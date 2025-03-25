@@ -12,15 +12,16 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Set up Selenium options
 options = Options()
-options.add_argument("--headless")  # Enable headless mode for GitHub Actions
+options.add_argument("--headless")
 options.add_argument("--disable-gpu")
+options.add_argument("--disable-software-rasterizer")
 options.add_argument("--window-size=1920,1080")
 
-# Rotate User-Agent to prevent detection
+# Rotate User-Agent
 ua = UserAgent()
 options.add_argument(f"user-agent={ua.random}")
 
-# Set up ChromeDriver using webdriver_manager
+# Set up ChromeDriver
 service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service, options=options)
 
@@ -28,58 +29,68 @@ url = "https://www.ebay.com/globaldeals/tech"
 
 def scrape_products():
     driver.get(url)
-    time.sleep(10)
+    wait = WebDriverWait(driver, 15)
+
     try:
-        products = WebDriverWait(driver, 15).until(
-        EC.presence_of_all_elements_located((By.CLASS_NAME, "dne-itemtile"))
-    )
+        # Wait until the product tiles are visible
+        wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "dne-itemtile")))
+
+        products = driver.find_elements(By.CLASS_NAME, "dne-itemtile")
         product_list = []
 
         for product in products:
-            #timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            #title 
-            title = product.find_element(By.CLASS_NAME, "ebayui-ellipsis-2").text
+            try:
+                title = product.find_element(By.CSS_SELECTOR, "h3").text
+            except:
+                title = "N/A"
 
-            #discounted price
-            price = product.find_element(By.CLASS_NAME, "first").text
+            try:
+                price = product.find_element(By.CLASS_NAME, "first").text
+            except:
+                price = "N/A"
 
-            #original price
-            original_price = product.find_element(By.CLASS_NAME, "itemtile-price-strikethrough").text
+            try:
+                original_price = product.find_element(By.CLASS_NAME, "itemtile-price-strikethrough").text
+            except:
+                original_price = "N/A"
 
-            #shipping
-            shipping = product.find_element(By.CLASS_NAME, "dne-itemtile-delivery").text
+            try:
+                shipping = product.find_element(By.CLASS_NAME, "dne-itemtile-delivery").text
+            except:
+                shipping = "N/A"
 
-            #item url
-            item_url = product.find_element(By.XPATH, ".//a[@itemprop = 'url']").get_attribute("href")
+            try:
+                item_url = product.find_element(By.XPATH, ".//a[@itemprop='url']").get_attribute("href")
+            except:
+                item_url = "N/A"
 
-            #save data
             product_data = {
                 "timestamp": timestamp,
                 "title": title,
-                "new_price": price, 
+                "new_price": price,
                 "original_price": original_price,
                 "shipping_info": shipping,
                 "item_url": item_url
             }
+
             product_list.append(product_data)
+
         return product_list
 
     except Exception as e:
         print("Error occurred:", e)
         return None
-    
+
 def save_to_csv(data):
     file_name = "ebay_tech_deals.csv"
     try:
         df = pd.read_csv(file_name)
     except FileNotFoundError:
-        df = pd.DataFrame(columns=[
-            "timestamp", "title", "new_price", "original_price", "shipping_info", "item_url"
-        ])
+        df = pd.DataFrame(columns=["timestamp", "title", "new_price", "original_price", "shipping_info", "item_url"])
 
-    new_df = pd.DataFrame(data)  
+    new_df = pd.DataFrame(data)
     df = pd.concat([df, new_df], ignore_index=True)
     df.to_csv(file_name, index=False)
 
@@ -94,5 +105,3 @@ if __name__ == "__main__":
         print("Failed to scrape data.")
 
     driver.quit()
-
-
